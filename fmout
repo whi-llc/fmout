@@ -160,7 +160,7 @@ for opt,arg in options:
     elif opt == '-f':
         plot_files = True
     elif opt == '-v':
-        sys.exit('[Version 0.61]')
+        sys.exit('[Version 0.62]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -396,9 +396,7 @@ for arg in iterarg:
             b=o[0]
             m=0
             res=0
-            offset_cov=0
-            rate_cov=0
-            corr_cov=0
+            cov_available = False
 #fit
             if count[key]>1:
                 if count[key]==2:
@@ -412,6 +410,7 @@ for arg in iterarg:
                 if count[key]>2 and print_cov:
                     try:
                         _, cov = np.polyfit(t,o,1, cov=True)
+                        cov_available = True
                         offset_cov=math.sqrt(max(0,cov[1][1]))
                         rate_cov=math.sqrt(max(0,cov[0][0]))
                         if offset_cov !=0 and rate_cov!=0:
@@ -463,9 +462,14 @@ for arg in iterarg:
                 dataf.close()
             if print_cov:
                 print '{:9s}'.format(root), '{:24s}'.format(key),
-                print '{:7.2e}'.format(offset_cov),
-                print '{:10.3e}'.format(rate_cov*1e-6),
-                print '{:8.3f}'.format(corr_cov),
+                if cov_available:
+                    print '{:7.2e}'.format(offset_cov),
+                    print '{:10.3e}'.format(rate_cov*1e-6),
+                    print '{:8.3f}'.format(corr_cov),
+                else:
+                    print '    -  ',
+                    print '   -      ',
+                    print '    -   ',
                 print count[key],
                 print '/',all[key],
                 print '{:5.1f}'.format(dev)
