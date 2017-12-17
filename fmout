@@ -1,0 +1,502 @@
+#!/usr/bin/python
+#
+# Copyright (c) 2021 WHI LLC
+#
+# adjust: Adjust clock models for VLBI data correlation.
+# (see http://github.com/whi-llc/adjust).
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+import os
+import sys
+import getopt
+import re
+#from datetime import datetime
+import datetime
+#from datetime import timedelta
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+import math
+import warnings
+import string
+
+fit_line  = True
+make_plot = False
+all_data = False
+epoch_begin = False
+epoch_fixed = 0
+plot_files = False
+print_cov = False
+save_raw = False
+use_line = False
+merge_data = False
+trim_points = False
+delete_points = False
+wrap_points = False
+use_limit = True
+debug_output = False
+regex_selection = False
+regex_invert = False
+
+if len(sys.argv)==1:
+    sys.exit('try '+sys.argv[0]+' -h')
+
+try:
+    options, remainder = getopt.getopt(
+    sys.argv[1:],
+    'abcd:e:fg:hlm:noprs:t:vwyz')
+
+except getopt.GetoptError as err:
+    print('ERROR:', err)
+    sys.exit(1)
+
+for opt,arg in options:
+    if opt == '-h':
+        print 'Usage: '+sys.argv[0]+' -abcd:ef:g:hlm:noprs:t:vwyz files'
+        print '  fits fmout & maser data from log files, prints values in order:'
+        print '           log name'
+        print '           data type'
+        print '           offset (microseconds)'
+        print '           rate (sec/sec)'
+        print '           epoch of offset to the nearest second'
+        print '           sigma of samples (microseconds)'
+        print ' the sign of offset and rate is reversed if the data type ends'
+        print ' in fmout or maser, i.e., values are "clock early"'
+        print 'Options:'
+        print ' -a   plot all data, otherwise start after first scan_name= and preob'
+        print '      and end before the last postob'
+        print ' -b   fit for offset at beginning of data, othewise at the centroid'
+        print ' -c   print convariance, otherwise omitted, values in order:'
+        print '        offset sigma (scaled)'
+        print '        rate   sigma (scaled)'
+        print '        correlation'
+        print '        included points / total points'
+        print '        deviation of residuals: (max-min)/sigma'
+        print ' -d value'
+        print '      delete points more than "value" ms from zero, "500" might be useful'
+        print '      "value" can be a float'
+        print '      this is applied after "-w" and before "-t"'
+        print ' -e epoch'
+        print '      epoch format: 2017y198d22h12m08s'
+        print '      fields may be omitted from the right through hours'
+        print ' -f   generate plot files ending .pdf'
+        print ' -g string'
+        print '      Python regex expression to select what data is used'
+        print '      e.g., "fmout" would select only fmout data'
+        print ' -h   this text'
+        print ' -l   connect data with a line in plots'
+        print ' -m string'
+        print '      merge all the input files using "string" to identify the result'
+        print ' -n   no line fitting'
+        print ' -o   output debugging information: no data, all data deleted, etc.'
+        print ' -p   display plots interactively'
+        print ' -r   save pre-fit data to files ending .dat'
+        print '      each line contains time-in-seconds-from-epoch followed by value '
+        print ' -s value'
+        print '      generate simulated data with RMS noise "value" in ns, written to standard'
+        print '      output, which can be redirected to a file and then processed with fmout'
+        print '        if "-s 0" is used to generate the data,'
+        print '        the output processed with "-abc" should produce:'
+        print '                -2.500 -3.500e-12 2017y278d18h00m00s 0.000'
+        print '              8.83e-17  1.532e-27   -0.866 500 / 500   3.1'
+        print '        if "-s 10" is used to generate the data,'
+        print '        the output processed with "-abc" should repeatably produce:'
+        print '                -2.500 -3.493e-12 2017y278d18h00m00s 0.010'
+        print '              8.79e-04  1.524e-14   -0.866 500 / 500   7.2'
+
+        print ' -t value'
+        print '      trim points more than "value" ms from median, "1" might be useful'
+        print '      "value" can be a float'
+        print '      this is applied after "-w" and "-d"'
+        print ' -v   print version and exit'
+        print ' -w   wrap values more than 0.5 seconds from zero'
+        print '      this option is applied before "-d" and "-t"'
+        print ' -y   accept points outside +- 1 second'
+        print '      if not, points outside +- 1 second are removed before considering "-wdt"'
+        print ' -z   invert the sense of the "-g" selection'
+        sys.exit(0)
+    elif opt == '-a':
+        all_data = True
+    elif opt == "-b":
+        epoch_begin = True
+    elif opt == "-c":
+        print_cov = True
+    elif opt == "-t":
+        trim_points = True
+        trim_value = float(arg)*1000
+    elif opt == "-d":
+        delete_points = True
+        delete_value = float(arg)*1000
+    elif opt == '-z':
+        regex_invert = True
+    elif opt == '-g':
+        regex_selection = True
+        regex_object = re.compile(arg)
+    elif opt == '-r':
+        save_raw = True
+    elif opt == '-l':
+        use_line = True
+    elif opt == '-m':
+        merge_data = True
+        merge_string = arg
+    elif opt == '-n':
+        fit_line = False
+    elif opt == '-o':
+        debug_output = True
+    elif opt == '-p':
+        make_plot = True
+    elif opt == '-f':
+        plot_files = True
+    elif opt == '-v':
+        sys.exit('[Version 0.61]')
+    elif opt == '-w':
+        wrap_points = True
+    elif opt == '-y':
+        use_limit= False
+    elif opt == "-s":
+        value = float(arg)*1e-9
+        if value < 1e-16:
+            value=1e-16
+        d = datetime.datetime(2017, 10, 5, 18, 00)
+        off = -2.5e-6
+        rate = -3.5e-12
+        np.random.seed(42) # the answer to the question
+        for n in range(500):
+            b = d + n*datetime.timedelta(0,200)
+            print b.strftime('%Y.%j.%H:%M:%S.%f')[:-4]+'/fmout-gps/'+'{:e}'.format(off+n*200*rate+np.random.normal(loc=0.0,scale=value))
+        sys.exit(0)
+    elif opt == '-e':
+        try:
+            epoch_fixed = datetime.datetime.strptime(arg,'%Yy%jd%Hh%Mm%Ss')
+        except ValueError:
+            try:
+                epoch_fixed = datetime.datetime.strptime(arg,'%Yy%jd%Hh%Mm')
+            except ValueError:
+                try:
+                    epoch_fixed = datetime.datetime.strptime(arg,'%Yy%jd%Hh')
+                except ValueError:
+                    try:
+                        epoch_fixed = datetime.datetime.strptime(arg,'%Yy%jd')
+                    except ValueError:
+                        sys.exit('bad epoch format for -e')
+
+iterarg = iter(remainder)
+
+fmout = re.compile(r'^([0-9.:]{20})(?:|;"|[^;][^"].*)/(.*fmout.*)/[^-+\.\d]*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)(\S*)')
+maser = re.compile(r'^([0-9.:]{20})(?:|;"|[^;][^"].*)/(.*maser.*)/[^-+\.\d]*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)(\S*)')
+rdbe_gps = re.compile(r'^([0-9.:]{20})#(rdtc.#dot2.ps.*)/(\S+)')
+#2017.278.18:00:00.16#rdtcc#dot2gps/1.157031250e-05
+#12345678901234567890
+scan_name= re.compile(':scan_name=');
+preob= re.compile(':preob')
+postob= re.compile(':postob')
+
+for arg in iterarg:
+    if all_data:
+        scan_name_found=1
+        preob_found=1
+    else:
+        scan_name_found=0
+        preob_found=0
+    if not merge_data or arg == remainder[0]:
+        x={}
+        y={}
+        count={}
+        last = {}
+        negative={}
+    with open(arg) as infile:
+        for line in infile:
+            if  not scan_name_found:
+                m=scan_name.search(line)
+                if m:
+                    scan_name_found=1
+                    continue
+            if  not preob_found:
+                m=preob.search(line)
+                if m:
+                    preob_found=1
+                    continue
+            if not preob_found or  not scan_name_found:
+                continue
+            m=postob.search(line)
+            if m:
+                key_list=x.keys()
+                for key in key_list:
+                    last[key]=count[key]
+            m=fmout.match(line)
+            m2=maser.match(line)
+            m3=rdbe_gps.match(line)
+            if m:
+                key=m.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
+                            continue
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m.group(3))*1e6
+                except ValueError:
+                    sys.exit("can't decode line "+m.group(1))
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+                    g = re.compile(r'gps[-2]fmout')
+                    if g.search(key):
+                        negative[key]=True
+            elif m2:
+                key=m2.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
+                            continue
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m2.group(1),'%Y.%j.%H:%M:%S.%f')
+                factor=1e6
+# for shanghai
+                if m2.group(4) == 'u':
+                    factor=1
+                try:
+                    fm=float(m2.group(3))*factor
+                except ValueError:
+                    sys.exit("can't decode line "+m2.group(1))
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+                    g = re.compile(r'gps[-2]maser')
+                    if g.search(key):
+                        negative[key]=True
+            elif m3:
+                key=m3.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
+                            continue
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m3.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m3.group(3))*1e6
+                except ValueError:
+                    sys.exit("can't decode line "+m3.group(1))
+                fm=float(m3.group(3))*1e6
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+            else:
+                continue
+            if use_limit and math.fabs(fm) >= 1e6:
+                continue
+            if wrap_points:
+                if fm > 5e5:
+                    fm=fm-1e6
+                elif fm < -5e5:
+                    fm=fm+1e6
+            if delete_points:
+                if abs(fm) >= delete_value:
+                    continue
+            if key in negative:
+                fm=-fm
+            x[key][count[key]]=dt
+            y[key][count[key]]=fm
+            count[key]=count[key]+1
+#
+# fit the data
+#
+    if merge_data and arg != remainder[-1]:
+        continue
+    if  not all_data:
+        key_list=x.keys()
+        for key in key_list:
+            count[key]=last[key]
+    all = {}
+    key_list=x.keys()
+    if debug_output:
+        if not key_list:
+            print 'No data found in '+arg
+    for key in key_list:
+        if count[key]==0:
+            if debug_output:
+                print 'No data included for key '+key+' in '+arg
+            continue
+#edit
+        all[key]=count[key]
+        if trim_points:
+            o=np.array([])
+            for i in range(count[key]):
+                o=np.append(o,y[key][i])
+            median=np.median(o)
+            out=0
+            for i in range(count[key]):
+                if math.fabs(o[i]-median) < trim_value:
+                    x[key][out]=x[key][i]
+                    y[key][out]=y[key][i]
+                    out=out+1
+            count[key]=out
+#set epoch
+        if count[key]==0:
+            if debug_output:
+                print 'All data trimmed for key '+key+' in '+arg
+            continue
+        if epoch_fixed !=0:
+            epoch=epoch_fixed
+        elif epoch_begin:
+            t=np.array([])
+            for i in range(count[key]):
+                t=np.append(t,(x[key][i]-x[key][0]).total_seconds())
+            index=np.argsort(t)
+            epoch=x[key][index[0]]
+        else:
+            average=0
+            for i in range(count[key]):
+                average=average+(x[key][i]-x[key][0]).total_seconds()
+            epoch=x[key][0]+datetime.timedelta(0,average/count[key])
+#
+        t=np.array([])
+        o=np.array([])
+        for i in range(count[key]):
+            t=np.append(t,(x[key][i]-epoch).total_seconds())
+            o=np.append(o,y[key][i])
+#sort
+        index=np.argsort(t)
+        t=t[index]
+        o=o[index]
+# plot time axis
+        diff=t[count[key]-1]-t[0]
+        days=diff>86400*2
+        u=np.array([])
+        for i in range(count[key]):
+            if days:
+                u=np.append(u,t[i]/86400)
+            else:
+                u=np.append(u,t[i]/3600)
+# fit init
+        if fit_line:
+            v=[0]
+            b=o[0]
+            m=0
+            res=0
+            offset_cov=0
+            rate_cov=0
+            corr_cov=0
+#fit
+            if count[key]>1:
+                if count[key]==2:
+                    warnings.simplefilter('ignore', np.RankWarning)
+                    fit, _, _, _, _ = np.polyfit(t,o,1,full=True)
+                else:
+                    warnings.simplefilter('always', np.RankWarning)
+                    fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
+                m,b=fit
+#
+                if count[key]>2 and print_cov:
+                    try:
+                        _, cov = np.polyfit(t,o,1, cov=True)
+                        offset_cov=math.sqrt(max(0,cov[1][1]))
+                        rate_cov=math.sqrt(max(0,cov[0][0]))
+                        if offset_cov !=0 and rate_cov!=0:
+                            corr_cov= cov[0][1]/(offset_cov*rate_cov)
+                    except TypeError:
+                        pass
+#
+                v=np.polyval(fit, t) - o
+                if count[key] > 2:
+                    res=math.sqrt(res/(count[key]-2))
+# residuals
+            mx=v[0]
+            mn=v[0]
+            for i in range(count[key]):
+                if v[i] > mx:
+                    mx=v[i]
+                if v[i] < mn:
+                    mn=v[i]
+#
+            if res > 0:
+                dev=(mx-mn)/res
+            else:
+                dev=0
+#
+        tim=epoch.strftime('%Yy%jd%Hh%Mm%Ss')
+#        tim=epoch.strftime('%Yy%jd%Hh%Mm%S.%f')
+# remove trail zeros in fractional seconds
+#        for i in range(4):
+#            if tim[-1] == '0':
+#                tim=tim[:-1]
+#            else:
+#                break
+#        tim=tim+'s'
+# find name
+        if not merge_data:
+            head, tail =os.path.split(arg)
+            root, ext =os.path.splitext(tail)
+        else:
+            root = merge_string
+#print data
+        if fit_line:
+            print '{:9s}'.format(root), '{:24s}'.format(key),
+            print '{:8.3f}'.format(b), '{:10.3e}'.format(m*1e-6),tim,
+            print  '{:.3f}'.format(res)
+            if save_raw:
+                dataf=open(root+'_'+key+'.dat','w')
+                for i in range(count[key]):
+                    dataf.write(str(t[i])+' '+str(o[i])+'\n')
+                dataf.close()
+            if print_cov:
+                print '{:9s}'.format(root), '{:24s}'.format(key),
+                print '{:7.2e}'.format(offset_cov),
+                print '{:10.3e}'.format(rate_cov*1e-6),
+                print '{:8.3f}'.format(corr_cov),
+                print count[key],
+                print '/',all[key],
+                print '{:5.1f}'.format(dev)
+# plotting
+        if make_plot or plot_files:
+            plot = plt.figure()
+            if use_line:
+                if fit_line:
+                    plt.plot(u,o,'b.',u,o,'b',[u[0],u[-1]], m*np.array([t[0],t[-1]]) + b, 'k-')
+                else:
+                    plt.plot(u,o,'b.',u,o,'b')
+            else:
+                if fit_line:
+                    plt.plot(u,o,'b.',[u[0],u[-1]], m*np.array([t[0],t[-1]]) + b, 'k-')
+                else:
+                    plt.plot(u,o,'b.')
+            if key in negative:
+                plt.title(root+' '+key+' (negative) n='+str(count[key]))
+            else:
+                plt.title(root+' '+key+ '           n='+str(count[key]))
+            tim=epoch.strftime('%Y/%m/%d %H:%M:%S')
+            if days:
+                plt.xlabel('Days after '+tim)
+            else:
+                plt.xlabel('Hours after '+tim)
+            plt.ylabel('Microseconds')
+            if fit_line:
+                plt.annotate('offset '+'{:.3f}'.format(b)+'   (sec/sec) '+ '{:.3e}'.format(m*1e-6)
+                    + '   rms '+'{:.3f}'.format(res)+'   (max-min)/rms '+ '{:.1f}'.format(dev),
+                    xy=(0.05, 0.95), xycoords='axes fraction')
+            if make_plot:
+                plt.show()
+            if plot_files:
+                plot.savefig(root+'_'+key+'.pdf')
