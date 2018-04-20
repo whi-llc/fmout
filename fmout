@@ -36,8 +36,11 @@ def breaks(x,y,step,list):
     if step > 0:
         for i in range(1,x.size):
             if math.fabs(y[i]-last) > step:
-                avg=0.5*(x[i]+x[i-1])
-                times.append(np.maximum(0.5*(x[i]+x[i-1]),x[i]-1))
+                times.append(0.5*(x[i]+x[i-1]))
+#above makes the jump epoch midway between the latest two epochs
+#the next (comment) line is for one second before the last value, but
+#                times.append(np.maximum(0.5*(x[i]+x[i-1]),x[i]-1))
+#really need it before the latest scan
             last=y[i]
     times.append(x[x.size-1]+1)
     times=times+list
@@ -218,7 +221,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.71]')
+        sys.exit('[Version 0.72]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -545,7 +548,10 @@ for arg in iterarg:
             m=coeff[-1]
             b=coeff[0]
             print '{:8.3f}'.format(b), '{:10.3e}'.format(m*1e-6),tim,
-            print  '{:.3f}'.format(res)
+            if res < 0.001:
+                print  '{:9.3e}'.format(res)
+            else:
+                print  '{:.3f}'.format(res)
             for i in range(1,l_times-1):
                 print '{:9s}'.format(root), '{:24s}'.format('break'),
                 tim=(epoch+datetime.timedelta(
@@ -559,7 +565,10 @@ for arg in iterarg:
         elif fit_line:
             print '{:9s}'.format(root), '{:24s}'.format(key),
             print '{:8.3f}'.format(b), '{:10.3e}'.format(m*1e-6),tim,
-            print  '{:.3f}'.format(res)
+            if res < 0.001:
+                print  '{:9.3e}'.format(res)
+            else:
+                print  '{:.3f}'.format(res)
         if find_jumps or fit_line:
             if print_cov:
                 print '{:9s}'.format(root), '{:24s}'.format(key),
