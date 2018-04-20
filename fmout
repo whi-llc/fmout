@@ -36,7 +36,8 @@ def breaks(x,y,step,list):
     if step > 0:
         for i in range(1,x.size):
             if math.fabs(y[i]-last) > step:
-                times.append(0.5*(x[i]+x[i-1]))
+                avg=0.5*(x[i]+x[i-1])
+                times.append(np.maximum(0.5*(x[i]+x[i-1]),x[i]-1))
             last=y[i]
     times.append(x[x.size-1]+1)
     times=times+list
@@ -217,7 +218,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.70]')
+        sys.exit('[Version 0.71]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
