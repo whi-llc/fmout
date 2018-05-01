@@ -221,7 +221,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.72]')
+        sys.exit('[Version 0.73]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -260,6 +260,8 @@ maser = re.compile(r'^([0-9.:]{20})(?:|;"|[^;][^"].*)/(.*maser.*)/[^-+\.\d]*([-+
 rdbe_gps = re.compile(r'^([0-9.:]{20})#(rdtc.#dot2.ps.*)/(\S+)')
 #2017.278.18:00:00.16#rdtcc#dot2gps/1.157031250e-05
 #12345678901234567890
+#2017.337.22:47:46.86/rdbeb/!dbe_gps_offset?0:-5.189453125e-05;
+rdbe_gps2 = re.compile(r'^([0-9.:]{20})/(rdbe.)/!(dbe_.ps_offset)\?0:([^;]+);')
 scan_name= re.compile(r'^([0-9.:]{20}):scan_name=');
 preob= re.compile(':preob')
 postob= re.compile(':postob')
@@ -308,6 +310,7 @@ for arg in iterarg:
             m=fmout.match(line)
             m2=maser.match(line)
             m3=rdbe_gps.match(line)
+            m4=rdbe_gps2.match(line)
             if m:
                 key=m.group(2)
                 if regex_selection:
@@ -369,6 +372,25 @@ for arg in iterarg:
                 except ValueError:
                     sys.exit("can't decode line "+m3.group(1))
                 fm=float(m3.group(3))*1e6
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+            elif m4:
+                key=m4.group(2) + '_' + m4.group(3)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
+                            continue
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m4.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m4.group(4))*1e6
+                except ValueError:
+                    sys.exit("can't decode line "+m4.group(1))
+                fm=float(m4.group(4))*1e6
                 if key not in x:
                     count[key]=0
                     x[key]={}
