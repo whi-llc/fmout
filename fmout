@@ -67,6 +67,7 @@ regex_invert = False
 find_jumps = False
 plot_raw_data = False
 delta_jumps = False
+remove_points = False
 
 if len(sys.argv)==1:
     sys.exit('try '+sys.argv[0]+' -h')
@@ -74,7 +75,7 @@ if len(sys.argv)==1:
 try:
     options, remainder = getopt.getopt(
     sys.argv[1:],
-    'abcd:e:fg:hj:lm:nopqrs:t:uvwyz')
+    'abcd:e:fg:hj:lm:nopqr:s:t:uvwyzR')
 
 except getopt.GetoptError as err:
     print('ERROR:', err)
@@ -82,7 +83,7 @@ except getopt.GetoptError as err:
 
 for opt,arg in options:
     if opt == '-h':
-        print 'Usage: '+sys.argv[0]+' -abcd:ef:g:hj:lm:nopqrs:t:uvwyz files'
+        print 'Usage: '+sys.argv[0]+' -abcd:ef:g:hj:lm:nopqr:s:t:uvwyzR files'
         print '  fits fmout & maser data from log files, prints values in order:'
         print '           log name'
         print '           data type'
@@ -141,8 +142,9 @@ for opt,arg in options:
         print ' -o   output debugging messages: no data, all data deleted, etc.'
         print ' -p   display plots interactively'
         print ' -q   print deltas for breaks ("-j")'
-        print ' -r   save pre-fit data to files ending .dat'
-        print '      each line contains time-in-seconds-from-epoch followed by value '
+        print ' -r value'
+        print '      remove residuals more than "value" ns from median, "50" might be useful'
+        print '      this is applied after "-w" and "-d" and "-t"'
         print ' -s value'
         print '      generate simulated data with RMS noise "value" in ns, written to standard'
         print '      output, which can be redirected to a file and then processed with fmout'
@@ -166,6 +168,8 @@ for opt,arg in options:
         print ' -y   accept points outside +- 1 second'
         print '      if not, points outside +- 1 second are removed before considering "-wdt"'
         print ' -z   invert the sense of the "-g" selection'
+        print ' -R   save pre-fit data to files ending .dat'
+        print '      each line contains time-in-seconds-from-epoch followed by value '
         sys.exit(0)
     elif opt == '-a':
         all_data = True
@@ -179,6 +183,9 @@ for opt,arg in options:
     elif opt == "-d":
         delete_points = True
         delete_value = float(arg)*1000
+    elif opt == "-r":
+        remove_points = True
+        remove_value = float(arg)*0.001
     elif opt == '-z':
         regex_invert = True
     elif opt == '-g':
@@ -200,7 +207,7 @@ for opt,arg in options:
                 else:
                     jump_list.append((epoch_jump-epoch_fixed).total_seconds())
         epoch_begin = True
-    elif opt == '-r':
+    elif opt == '-R':
         save_raw = True
     elif opt == '-l':
         use_line = True
@@ -221,7 +228,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.73]')
+        sys.exit('[Version 0.74]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -445,10 +452,33 @@ for arg in iterarg:
                     y[key][out]=y[key][i]
                     out=out+1
             count[key]=out
+#remove points
+        if remove_points and count[key]>1:
+            t=np.array([])
+            o=np.array([])
+            for i in range(count[key]):
+                t=np.append(t,(x[key][i]-x[key][0]).total_seconds())
+                o=np.append(o,y[key][i])
+            if count[key]==2:
+                warnings.simplefilter('ignore', np.RankWarning)
+                fit, _, _, _, _ = np.polyfit(t,o,1,full=True)
+            else:
+                warnings.simplefilter('always', np.RankWarning)
+                fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
+            m,b=fit
+            v = o - np.polyval(fit, t)
+            out=0
+            for i in range(count[key]):
+                if math.fabs(v[i]) < remove_value:
+                    x[key][out]=x[key][i]
+                    y[key][out]=y[key][i]
+                    out=out+1
+            count[key]=out
+
 #set epoch
         if count[key]==0:
             if debug_output:
-                print 'All data trimmed for key '+key+' in '+arg
+                print 'All data trimmed/removed for key '+key+' in '+arg
             continue
         if epoch_fixed !=0:
             epoch=epoch_fixed
@@ -514,6 +544,8 @@ for arg in iterarg:
                     warnings.simplefilter('always', np.RankWarning)
                     fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
                 m,b=fit
+                if remove_points:
+                    v = o - np.polyval(fit, t)
 #
                 if count[key]>2 and print_cov:
                     try:
