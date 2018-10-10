@@ -145,6 +145,7 @@ for opt,arg in options:
         print ' -r value'
         print '      remove residuals more than "value" ns from median, "50" might be useful'
         print '      this is applied after "-w" and "-d" and "-t"'
+        print '      it is best to remove the biggest outliers with other flags, the add "-r"'
         print ' -s value'
         print '      generate simulated data with RMS noise "value" in ns, written to standard'
         print '      output, which can be redirected to a file and then processed with fmout'
@@ -228,7 +229,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.74]')
+        sys.exit('[Version 0.75]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
