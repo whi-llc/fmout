@@ -83,7 +83,7 @@ except getopt.GetoptError as err:
 
 for opt,arg in options:
     if opt == '-h':
-        print('Usage: '+sys.argv[0]+' -abcd:ef:g:hj:lm:nopqr:s:t:uvwyzR files')
+        print('Usage: '+os.path.basename(os.path.splitext(sys.argv[0])[0])+' -abcd:ef:g:hj:lm:nopqr:s:t:uvwyzR files')
         print('  fits fmout & maser data from log files, prints values in order:')
         print('           log name')
         print('           data type')
@@ -92,7 +92,7 @@ for opt,arg in options:
         print('           epoch of offset to the nearest second')
         print('           sigma of samples (microseconds)')
         print(' the sign of offset and rate is reversed if the data type ends')
-        print(' in fmout or maser, i.e., values are "clock early"')
+        print(' in fmout or maser, i.e., values are "clock_early"')
         print('Options:')
         print(' -a   plot all data, otherwise start after first scan_name= and preob')
         print('      and end before the last postob, per file')
@@ -104,8 +104,9 @@ for opt,arg in options:
         print('        correlation')
         print('        included points / total points')
         print('        deviation of residuals: (max-min)/sigma')
-        print('      sigmas and correlation are not available for some versions of numpy')
-        print('        and for "-j"')
+        print('      sigmas and correlation are not available for "-j" and')
+        print('        some versions of numpy')
+        print('      residual plots show the model variance')
         print(' -d value (possibly float)')
         print('      delete points more than "value" ms from zero, "500" might be useful')
         print('      this is applied after "-w" and before "-t"')
@@ -229,7 +230,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.76]')
+        sys.exit('[Version 0.77]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -576,6 +577,18 @@ for arg in iterarg:
                     try:
                         _, cov = np.polyfit(t,o,1, cov=True)
                         cov_available = True
+                        msig=np.array([])
+                        msign=np.array([])
+                        for i in range(count[key]):
+                            part0=t[i]
+                            part1=1
+                            prop=part0*part0*cov[0][0]
+                            prop=prop+part0*part1*cov[0][1]
+                            prop=prop+part1*part0*cov[1][0]
+                            prop=prop+part1*part1*cov[1][1]
+                            prop=math.sqrt(prop)
+                            msig=np.append(msig,prop)
+                            msign=np.append(msign,-prop)
                         offset_cov=math.sqrt(max(0,cov[1][1]))
                         rate_cov=math.sqrt(max(0,cov[0][0]))
                         if offset_cov !=0 and rate_cov!=0:
@@ -695,6 +708,10 @@ for arg in iterarg:
                 if use_line:
                     plt.plot(u,v,'b-')
 #
+                if cov_available:
+                    plt.plot(u,msig,'r-')
+                    plt.plot(u,msign,'r-')
+                    plt.annotate('model variance', xy=(0.40, 0.90), xycoords='axes fraction',color='r')
                 if find_jumps:
                     for i in range(1,l_times-1):
                         plt.axvline(x=u_times[i],c='k')
