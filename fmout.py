@@ -712,6 +712,7 @@ for arg in iterarg:
                     plt.plot(u,msig,'r-')
                     plt.plot(u,msign,'r-')
                     plt.annotate('model variance', xy=(0.40, 0.90), xycoords='axes fraction',color='r')
+                    plt.axhline(y=0,c='k')
                 if find_jumps:
                     for i in range(1,l_times-1):
                         plt.axvline(x=u_times[i],c='k')
