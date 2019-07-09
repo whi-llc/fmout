@@ -230,7 +230,7 @@ for opt,arg in options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.77]')
+        sys.exit('[Version 0.78]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -577,18 +577,6 @@ for arg in iterarg:
                     try:
                         _, cov = np.polyfit(t,o,1, cov=True)
                         cov_available = True
-                        msig=np.array([])
-                        msign=np.array([])
-                        for i in range(count[key]):
-                            part0=t[i]
-                            part1=1
-                            prop=part0*part0*cov[0][0]
-                            prop=prop+part0*part1*cov[0][1]
-                            prop=prop+part1*part0*cov[1][0]
-                            prop=prop+part1*part1*cov[1][1]
-                            prop=math.sqrt(prop)
-                            msig=np.append(msig,prop)
-                            msign=np.append(msign,-prop)
                         offset_cov=math.sqrt(max(0,cov[1][1]))
                         rate_cov=math.sqrt(max(0,cov[0][0]))
                         if offset_cov !=0 and rate_cov!=0:
@@ -709,8 +697,26 @@ for arg in iterarg:
                     plt.plot(u,v,'b-')
 #
                 if cov_available:
-                    plt.plot(u,msig,'r-')
-                    plt.plot(u,msign,'r-')
+                    msig=np.array([])
+                    msign=np.array([])
+                    u2=np.array([])
+                    xmin,xmax,_,_=plt.axis()
+                    xmin=t[0]
+                    xmax=t[count[key]-1]
+                    xdiff=(xmax-xmin)/499
+                    for i in range(500):
+                        part0=xmin+i*xdiff
+                        u2=np.append(u2,part0/3600)
+                        part1=1
+                        prop=part0*part0*cov[0][0]
+                        prop=prop+part0*part1*cov[0][1]
+                        prop=prop+part1*part0*cov[1][0]
+                        prop=prop+part1*part1*cov[1][1]
+                        prop=math.sqrt(prop)
+                        msig=np.append(msig,prop)
+                        msign=np.append(msign,-prop)
+                    plt.plot(u2,msig,'r-')
+                    plt.plot(u2,msign,'r-')
                     plt.annotate('model variance', xy=(0.40, 0.90), xycoords='axes fraction',color='r')
                     plt.axhline(y=0,c='k')
                 if find_jumps:
