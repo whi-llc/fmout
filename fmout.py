@@ -291,17 +291,18 @@ for arg in iterarg:
         last = {}
         negative={}
         first_time = 0
-        scan_time = 0
     with open(arg) as infile:
         for line in infile:
             if first_time == 0:
-                first_time=datetime.datetime.strptime(
-                    line[0:20],'%Y.%j.%H:%M:%S.%f')
-            m=scan_name.search(line)
-            if m:
-                scan_time=datetime.datetime.strptime(
-                    m.group(1),'%Y.%j.%H:%M:%S.%f')
-            if  not scan_name_found:
+                try:
+                    first_time=datetime.datetime.strptime(
+                        line[0:20],'%Y.%j.%H:%M:%S.%f')
+                except ValueError:
+                    if debug_output:
+                        print('Bad first time in "'
+                            +arg+'": "'+line.strip()+'"')
+                        continue
+            if not scan_name_found:
                 m=scan_name.search(line)
                 if m:
                     scan_name_found=1
