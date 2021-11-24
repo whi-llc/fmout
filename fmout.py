@@ -30,6 +30,8 @@ import math
 import warnings
 import string
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 def breaks(x,y,step,list):
     times= [x[0]-1]
     last=y[0]
@@ -299,7 +301,7 @@ for arg in iterarg:
                         line[0:20],'%Y.%j.%H:%M:%S.%f')
                 except ValueError:
                     if debug_output:
-                        print('Bad first time in "'
+                        eprint('Bad first time in "'
                             +arg+'": "'+line.strip()+'"')
                         continue
             if not scan_name_found:
@@ -459,11 +461,11 @@ for arg in iterarg:
     key_list=list(x.keys())
     if debug_output:
         if not key_list:
-            print('No data found in '+arg)
+            eprint('No data found in '+arg)
     for key in key_list:
         if count[key]==0:
             if debug_output:
-                print('No data included for key '+key+' in '+arg)
+                eprint('No data included for key '+key+' in '+arg)
             continue
 #edit
         all[key]=count[key]
@@ -505,7 +507,7 @@ for arg in iterarg:
 #set epoch
         if count[key]==0:
             if debug_output:
-                print('All data trimmed/removed for key '+key+' in '+arg)
+                eprint('All data trimmed/removed for key '+key+' in '+arg)
             continue
         if epoch_fixed !=0:
             epoch=epoch_fixed
