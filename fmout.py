@@ -232,7 +232,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.78]')
+        sys.exit('[Version 0.79]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
