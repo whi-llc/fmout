@@ -86,94 +86,94 @@ except getopt.GetoptError as err:
 for opt,arg in options:
     if opt == '-h':
         print('Usage: '+os.path.basename(os.path.splitext(sys.argv[0])[0])+' -abcd:ef:g:hj:lm:nopqr:s:t:uvwyzR files')
-        print('  fits fmout & maser data from log files, prints values in order:')
-        print('           log name')
-        print('           data type')
-        print('           offset (microseconds)')
-        print('           rate (sec/sec)')
-        print('           epoch of offset to the nearest second')
-        print('           sigma of samples (microseconds)')
-        print(' the sign of offset and rate is reversed if the data type ends')
-        print(' in fmout or maser, i.e., values are "clock_early"')
-        print('Options:')
-        print(' -a   plot all data, otherwise start after first scan_name= and preob')
-        print('      and end before the last postob, per file')
-        print(' -b   fit for offset at beginning of data,')
-        print('      otherwise at the centroid or overrddden by "-e"')
-        print(' -c   print convariance, otherwise omitted, values in order:')
-        print('        offset sigma (scaled)')
-        print('        rate   sigma (scaled)')
-        print('        correlation')
-        print('        included points / total points')
-        print('        deviation of residuals: (max-min)/sigma')
-        print('      sigmas and correlation are not available for "-j" and')
-        print('        some versions of numpy')
-        print('      residual plots show the model variance')
-        print(' -d value (possibly float)')
-        print('      delete points more than "value" ms from zero, "500" might be useful')
-        print('      this is applied after "-w" and before "-t"')
-        print(' -e epoch')
-        print('      epoch format: 2017y198d22h12m08s')
-        print('      fields may be omitted from the right through hours')
-        print('      this option overrides "-b"')
-        print(' -f   generate plot files ending .pdf')
-        print(' -g string')
-        print('      Python regex expression to select what data is used')
-        print('      e.g., "fmout" would select only fmout data')
-        print(' -h   this text')
-        print(' -j  values (possibly floats) separated by colons (no white space)')
-        print('      the first value is the size of a jump (microseconds) to be considered an')
-        print('        offset break, "0.4" might be useful, a negative value disables jump')
-        print('        detection')
-        print('      the remaining values either explicit epochs and/or values in seconds')
-        print('      relative to the overall epoch for additional offsets:')
-        print('        for explicit epochs, the value is in the format of "-e" with all')
-        print('        fields specified, additionally a fixed epoch must have been specified')
-        print('        with "-e" previously in the command line')
-        print('        for values in seconds, the value is relative to the overall epoch')
-        print('          (see "-b" and "-e"), the times can be read interactively off the')
-        print('          "-p" plot with the pointer and multiplied by the appropriate scale,')
-        print('          3600 for hours or 86400 for days')
-        print('      this option inplies "-b", unless "-e" is specified')
-        print('      in plot output ("-f" and "-p"), the epochs are indicated by veritcal lines')
-        print('      the offset reported in plot annotations is the initial offset')
-        print(' -l   connect data with a line in plots')
-        print(' -m string')
-        print('      merge all the input files using "string" to identify the result')
-        print(' -n   no line fitting')
-        print('      implies "-u"')
-        print(' -o   output debugging messages: no data, all data deleted, etc.')
-        print(' -p   display plots interactively')
-        print(' -q   print deltas for breaks ("-j")')
-        print(' -r value')
-        print('      remove residuals more than "value" ns from median, "50" might be useful')
-        print('      this is applied after "-w" and "-d" and "-t"')
-        print('      it is best to remove the biggest outliers with other flags, the add "-r"')
-        print(' -s value')
-        print('      generate simulated data with RMS noise "value" in ns, written to standard')
-        print('      output, which can be redirected to a file and then processed with fmout')
-        print('        if "-s 0" is used to generate the data,')
-        print('        the output processed with "-abc" should produce:')
-        print('                -2.500 -3.500e-12 2017y278d18h00m00s 0.000')
-        print('              8.83e-17  1.532e-27   -0.866 500 / 500   3.1')
-        print('        if "-s 10" is used to generate the data,')
-        print('        the output processed with "-abc" should repeatably produce:')
-        print('                -2.500 -3.493e-12 2017y278d18h00m00s 0.010')
-        print('              8.79e-04  1.524e-14   -0.866 500 / 500   7.2')
-
-        print(' -t value')
-        print('      trim points more than "value" ms from median, "1" might be useful')
-        print('      "value" can be a float')
-        print('      this is applied after "-w" and "-d"')
-        print(' -u   plot original data and any model')
-        print(' -v   print version and exit')
-        print(' -w   wrap values more than 0.5 seconds from zero')
-        print('      this option is applied before "-d" and "-t"')
-        print(' -y   accept points outside +- 1 second')
-        print('      if not, points outside +- 1 second are removed before considering "-wdt"')
-        print(' -z   invert the sense of the "-g" selection')
-        print(' -R   save pre-fit data to files ending .dat')
-        print('      each line contains time-in-seconds-from-epoch followed by value ')
+        print('''
+ fits fmout & maser data from log files, prints values in order:
+    log name
+    data type
+    offset (microseconds)
+    rate (sec/sec)
+    epoch of offset to the nearest second
+    sigma of samples (microseconds)
+ the sign of offset and rate is reversed if the data type ends
+ in fmout or maser, i.e., values are "clock_early"
+Options:
+ -a   plot all data, otherwise start after first scan_name= and preob
+      and end before the last postob, per file
+ -b   fit for offset at beginning of data,
+      otherwise at the centroid or overrddden by "-e"
+ -c   print convariance, otherwise omitted, values in order:
+        offset sigma (scaled)
+        rate   sigma (scaled)
+        correlation
+        included points / total points
+        deviation of residuals: (max-min)/sigma
+      sigmas and correlation are not available for "-j" and
+        some versions of numpy
+      residual plots show the model variance
+ -d value (possibly float)
+      delete points more than "value" ms from zero, "500" might be useful
+      this is applied after "-w" and before "-t"
+ -e epoch
+      epoch format: 2017y198d22h12m08s
+      fields may be omitted from the right through hours
+      this option overrides "-b"
+ -f   generate plot files ending .pdf
+ -g string
+      Python regex expression to select what data is used
+      e.g., "fmout" would select only fmout data
+ -h   this text
+ -j  values (possibly floats) separated by colons (no white space)
+      the first value is the size of a jump (microseconds) to be considered an
+        offset break, "0.4" might be useful, a negative value disables jump
+        detection
+      the remaining values either explicit epochs and/or values in seconds
+      relative to the overall epoch for additional offsets:
+        for explicit epochs, the value is in the format of "-e" with all
+        fields specified, additionally a fixed epoch must have been specified
+        with "-e" previously in the command line
+        for values in seconds, the value is relative to the overall epoch
+          (see "-b" and "-e"), the times can be read interactively off the
+          "-p" plot with the pointer and multiplied by the appropriate scale,
+          3600 for hours or 86400 for days
+      this option inplies "-b", unless "-e" is specified
+      in plot output ("-f" and "-p"), the epochs are indicated by veritcal lines
+      the offset reported in plot annotations is the initial offset
+ -l   connect data with a line in plots
+ -m string
+      merge all the input files using "string" to identify the result
+ -n   no line fitting
+      implies "-u"
+ -o   output debugging messages: no data, all data deleted, etc.
+ -p   display plots interactively
+ -q   print deltas for breaks ("-j")
+ -r value
+      remove residuals more than "value" ns from median, "50" might be useful
+      this is applied after "-w" and "-d" and "-t"
+      it is best to remove the biggest outliers with other flags, the add "-r"
+ -s value
+      generate simulated data with RMS noise "value" in ns, written to standard
+      output, which can be redirected to a file and then processed with fmout
+        if "-s 0" is used to generate the data,
+        the output processed with "-abc" should produce:
+                -2.500 -3.500e-12 2017y278d18h00m00s 0.000
+              8.83e-17  1.532e-27   -0.866 500 / 500   3.1
+        if "-s 10" is used to generate the data,
+        the output processed with "-abc" should repeatably produce:
+                -2.500 -3.493e-12 2017y278d18h00m00s 0.010
+              8.79e-04  1.524e-14   -0.866 500 / 500   7.2
+ -t value
+      trim points more than "value" ms from median, "1" might be useful
+      "value" can be a float
+      this is applied after "-w" and "-d"
+ -u   plot original data and any model
+ -v   print version and exit
+ -w   wrap values more than 0.5 seconds from zero
+      this option is applied before "-d" and "-t"
+ -y   accept points outside +- 1 second
+      if not, points outside +- 1 second are removed before considering "-wdt"
+ -z   invert the sense of the "-g" selection
+ -R   save pre-fit data to files ending .dat
+      each line contains time-in-seconds-from-epoch followed by value''')
         sys.exit(0)
     elif opt == '-a':
         all_data = True
