@@ -553,7 +553,7 @@ for arg in iterarg:
                     if t[i] >times[j] and t[i] <times[j+1]:
 #                    if t[i] >times[j]:
                         ar[i][j]=1
-            coeff,res,rank,_ = np.linalg.lstsq(ar,o)
+            coeff,res,rank,_ = np.linalg.lstsq(ar,o,rcond=None)
             if rank < l_times:
                 sys.exit("breaks made fit degenerate, are they relative to the wrong epoch or too close together?")
             res=math.sqrt(res/(count[key]-l_times))
