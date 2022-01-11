@@ -685,7 +685,7 @@ for arg in iterarg:
                     else:
                         u_times=np.append(u_times,times[i]/3600)
 #
-            plot = plt.figure()
+            plot = plt.figure(figsize=(8,6))
             if plot_raw_data:
                 plt.plot(u,o,'b.')
                 if use_line:
