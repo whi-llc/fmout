@@ -240,7 +240,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.81]')
+        sys.exit('[Version 0.82]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -464,17 +464,15 @@ for arg in iterarg:
                 y[key][count[key]]=fm
                 count[key]=count[key]+1
         except Exception as err:
+            eprint(' Problem encountered in '+arg)
             if debug_output:
-                print(f" Unexpected {err=} {type(err)=}")
+                eprint(" Unexpected "+ str(err))
+                eprint(" Examine the above message for the approximate byte position of the problem")
+                sys.exit(" after line "+str(lines)+". Use -I to ignore.")
             else:
-                print(f" Unexpected {type(err)=}")
-            print(' Problem encountered somewhere after line '+str(lines)+' in '+arg)
-            if debug_output:
-                print(' Examine long string above for errors')
-                sys.exit(' Use -I to ignore')
-            else:
-                print(' The problem should be within the number bytes being buffered: 8192?')
-                sys.exit(' Try -o for more detail or use -I to ignore')
+                eprint(" Unexpected "+str(type(err)))
+                eprint(" The problem occurred after line "+str(lines)+".")
+                sys.exit(" Try -o for more detail or use -I to ignore.")
 #
 # fit the data
 #
