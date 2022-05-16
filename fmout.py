@@ -70,7 +70,6 @@ find_jumps = False
 plot_raw_data = False
 delta_jumps = False
 remove_points = False
-ignore_read_encoding_errors = False
 
 if len(sys.argv)==1:
     sys.exit('try '+sys.argv[0]+' -h')
@@ -78,7 +77,7 @@ if len(sys.argv)==1:
 try:
     options, remainder = getopt.getopt(
     sys.argv[1:],
-    'abcd:e:fg:hIj:lm:nopqr:s:t:uvwyzR')
+    'abcd:e:fg:hj:lm:nopqr:s:t:uvwyzR')
 
 except getopt.GetoptError as err:
     print(('ERROR:', err))
@@ -123,11 +122,6 @@ Options:
       Python regex expression to select what data is used
       e.g., "fmout" would select only fmout data
  -h   this text
- -I   ignore encoding errors while reading
-      If there is an encoding error without -I, the bad character can be
-      found by doing a binary search *after* the reported line. The -o
-      option can give some idea of how large a range the search should cover.
-      Typically it would be up to the buffering size, possibly 8192 bytes.
  -j  values (possibly floats) separated by colons (no white space)
       the first value is the size of a jump (microseconds) to be considered an
         offset break, "0.4" might be useful, a negative value disables jump
@@ -201,8 +195,6 @@ Options:
     elif opt == '-g':
         regex_selection = True
         regex_object = re.compile(arg)
-    elif opt == '-I':
-         ignore_read_encoding_errors = True
     elif opt == "-j":
         find_jumps = True
         arg_list=arg.split(':')
@@ -240,7 +232,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.82]')
+        sys.exit('[Version 0.83]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -286,6 +278,7 @@ dbbcout = re.compile(r'^([0-9.:]{20})(?:|;"|[^;][^"].*)/(.*dbbcout.*)/[^-+\.\d]*
 scan_name= re.compile(r'^([0-9.:]{20}):scan_name=');
 preob= re.compile(':preob')
 postob= re.compile(':postob')
+surrogates = re.compile(r"[\uDC80-\uDCFF]")
 
 for arg in iterarg:
     if all_data:
@@ -301,178 +294,173 @@ for arg in iterarg:
         last = {}
         negative={}
         first_time = 0
-    if ignore_read_encoding_errors:
-        errors='backslashreplace'
-    else:
-        errors='strict'
-    with open(arg, errors=errors) as infile:
-        lines=1
-        try:
-            for line in infile:
-                lines=lines+1
-                if first_time == 0:
-                    try:
-                        first_time=datetime.datetime.strptime(
-                            line[0:20],'%Y.%j.%H:%M:%S.%f')
-                    except ValueError:
-                        if debug_output:
-                            eprint('Bad first time in "'
-                                +arg+'": "'+line.strip()+'"')
-                            continue
-                if not scan_name_found:
-                    m=scan_name.search(line)
-                    if m:
-                        scan_name_found=1
+    lines=0
+    first_unicode_error = True
+    with open(arg, errors="surrogateescape") as infile:
+        for line in infile:
+            lines=lines+1
+            if surrogates.search(line):
+                if debug_output:
+                    if first_unicode_error:
+                        eprint(f"Found Unicode error on line {lines}")
+                        first_unicode_error = False
+                    else:
+# new lines may not be interpreted correctly, hence approximately
+                        eprint(f"Found Unicode error on line {lines} (approximately)")
+                continue
+            if first_time == 0:
+                try:
+                    first_time=datetime.datetime.strptime(
+                        line[0:20],'%Y.%j.%H:%M:%S.%f')
+                except ValueError:
+                    if debug_output:
+                        eprint('Bad first time in "'
+                            +arg+'": "'+line.strip()+'"')
                         continue
-                if  not preob_found:
-                    m=preob.search(line)
-                    if m:
-                        preob_found=1
-                        continue
-                if not preob_found or  not scan_name_found:
+            if not scan_name_found:
+                m=scan_name.search(line)
+                if m:
+                    scan_name_found=1
                     continue
-                m=postob.search(line)
+            if  not preob_found:
+                m=preob.search(line)
                 if m:
-                    key_list=list(x.keys())
-                    for key in key_list:
-                        last[key]=count[key]
-                m=fmout.match(line)
-                m2=maser.match(line)
-                m3=rdbe_gps.match(line)
-                m4=rdbe_gps2.match(line)
-                m5=dbbcout.match(line)
-                if m:
-                    key=m.group(2)
-                    if regex_selection:
-                        g=regex_object.search(key)
-                        if regex_invert:
-                            if g:
-                                continue
-                        elif not g:
+                    preob_found=1
+                    continue
+            if not preob_found or  not scan_name_found:
+                continue
+            m=postob.search(line)
+            if m:
+                key_list=list(x.keys())
+                for key in key_list:
+                    last[key]=count[key]
+            m=fmout.match(line)
+            m2=maser.match(line)
+            m3=rdbe_gps.match(line)
+            m4=rdbe_gps2.match(line)
+            m5=dbbcout.match(line)
+            if m:
+                key=m.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
                             continue
-                    dt=datetime.datetime.strptime(m.group(1),'%Y.%j.%H:%M:%S.%f')
-                    try:
-                        fm=float(m.group(3))*1e6
-                    except ValueError:
-                        sys.exit("can't decode line "+m.group(1))
-                    if key not in x:
-                        count[key]=0
-                        x[key]={}
-                        y[key]={}
-                        g = re.compile(r'gps[-2]fmout')
-                        if g.search(key):
-                            negative[key]=True
-                elif m2:
-                    key=m2.group(2)
-                    if regex_selection:
-                        g=regex_object.search(key)
-                        if regex_invert:
-                            if g:
-                                continue
-                        elif not g:
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m.group(3))*1e6
+                except ValueError:
+                    sys.exit("can't decode line "+m.group(1))
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+                    g = re.compile(r'gps[-2]fmout')
+                    if g.search(key):
+                        negative[key]=True
+            elif m2:
+                key=m2.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
                             continue
-                    dt=datetime.datetime.strptime(m2.group(1),'%Y.%j.%H:%M:%S.%f')
-                    factor=1e6
-    # for shanghai
-                    if m2.group(4) == 'u':
-                        factor=1
-                    try:
-                        fm=float(m2.group(3))*factor
-                    except ValueError:
-                        sys.exit("can't decode line "+m2.group(1))
-                    if key not in x:
-                        count[key]=0
-                        x[key]={}
-                        y[key]={}
-                        g = re.compile(r'gps[-2]maser')
-                        if g.search(key):
-                            negative[key]=True
-                elif m3:
-                    key=m3.group(2)
-                    if regex_selection:
-                        g=regex_object.search(key)
-                        if regex_invert:
-                            if g:
-                                continue
-                        elif not g:
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m2.group(1),'%Y.%j.%H:%M:%S.%f')
+                factor=1e6
+# for shanghai
+                if m2.group(4) == 'u':
+                    factor=1
+                try:
+                    fm=float(m2.group(3))*factor
+                except ValueError:
+                    sys.exit("can't decode line "+m2.group(1))
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+                    g = re.compile(r'gps[-2]maser')
+                    if g.search(key):
+                        negative[key]=True
+            elif m3:
+                key=m3.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
                             continue
-                    dt=datetime.datetime.strptime(m3.group(1),'%Y.%j.%H:%M:%S.%f')
-                    try:
-                        fm=float(m3.group(3))*1e6
-                    except ValueError:
-                        sys.exit("can't decode line "+m3.group(1))
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m3.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
                     fm=float(m3.group(3))*1e6
-                    if key not in x:
-                        count[key]=0
-                        x[key]={}
-                        y[key]={}
-                elif m4:
-                    key=m4.group(2) + '_' + m4.group(3)
-                    if regex_selection:
-                        g=regex_object.search(key)
-                        if regex_invert:
-                            if g:
-                                continue
-                        elif not g:
+                except ValueError:
+                    sys.exit("can't decode line "+m3.group(1))
+                fm=float(m3.group(3))*1e6
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+            elif m4:
+                key=m4.group(2) + '_' + m4.group(3)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
                             continue
-                    dt=datetime.datetime.strptime(m4.group(1),'%Y.%j.%H:%M:%S.%f')
-                    try:
-                        fm=float(m4.group(4))*1e6
-                    except ValueError:
-                        sys.exit("can't decode line "+m4.group(1))
-                    fm=float(m4.group(4))*1e6
-                    if key not in x:
-                        count[key]=0
-                        x[key]={}
-                        y[key]={}
-                elif m5:
-                    key=m5.group(2)
-                    if regex_selection:
-                        g=regex_object.search(key)
-                        if regex_invert:
-                            if g:
-                                continue
-                        elif not g:
-                            continue
-                    dt=datetime.datetime.strptime(m5.group(1),'%Y.%j.%H:%M:%S.%f')
-                    try:
-                        fm=float(m5.group(3))*1e6
-                    except ValueError:
-                        sys.exit("can't decode line "+m5.group(1))
-                    if key not in x:
-                        count[key]=0
-                        x[key]={}
-                        y[key]={}
-                        g = re.compile(r'gps[-2]dbbcout')
-                        if g.search(key):
-                            negative[key]=True
-                else:
-                    continue
-                if use_limit and math.fabs(fm) >= 1e6:
-                    continue
-                if wrap_points:
-                    if fm > 5e5:
-                        fm=fm-1e6
-                    elif fm < -5e5:
-                        fm=fm+1e6
-                if delete_points:
-                    if abs(fm) >= delete_value:
+                    elif not g:
                         continue
-                if key in negative:
-                    fm=-fm
-                x[key][count[key]]=dt
-                y[key][count[key]]=fm
-                count[key]=count[key]+1
-        except Exception as err:
-            eprint(' Problem encountered in '+arg)
-            if debug_output:
-                eprint(" Unexpected "+ str(err))
-                eprint(" Examine the above message for the approximate byte position of the problem")
-                sys.exit(" after line "+str(lines)+". Use -I to ignore.")
+                dt=datetime.datetime.strptime(m4.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m4.group(4))*1e6
+                except ValueError:
+                    sys.exit("can't decode line "+m4.group(1))
+                fm=float(m4.group(4))*1e6
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+            elif m5:
+                key=m5.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
+                            continue
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m5.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m5.group(3))*1e6
+                except ValueError:
+                    sys.exit("can't decode line "+m5.group(1))
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
+                    g = re.compile(r'gps[-2]dbbcout')
+                    if g.search(key):
+                        negative[key]=True
             else:
-                eprint(" Unexpected "+str(type(err)))
-                eprint(" The problem occurred after line "+str(lines)+".")
-                sys.exit(" Try -o for more detail or use -I to ignore.")
+                continue
+            if use_limit and math.fabs(fm) >= 1e6:
+                continue
+            if wrap_points:
+                if fm > 5e5:
+                    fm=fm-1e6
+                elif fm < -5e5:
+                    fm=fm+1e6
+            if delete_points:
+                if abs(fm) >= delete_value:
+                    continue
+            if key in negative:
+                fm=-fm
+            x[key][count[key]]=dt
+            y[key][count[key]]=fm
+            count[key]=count[key]+1
 #
 # fit the data
 #
