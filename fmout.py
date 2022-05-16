@@ -232,7 +232,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.84]')
+        sys.exit('[Version 0.85]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -295,18 +295,13 @@ for arg in iterarg:
         negative={}
         first_time = 0
     lines=0
-    first_unicode_error = True
     with open(arg, errors="surrogateescape") as infile:
         for line in infile:
             lines=lines+1
             if surrogates.search(line):
                 if debug_output:
-                    if first_unicode_error:
-                        eprint(f"Found Unicode error on line {lines}")
-                        first_unicode_error = False
-                    else:
 # new lines may not be interpreted correctly, hence approximately
-                        eprint(f"Found Unicode error on line {lines} (approximately)")
+                    eprint(f"Found Unicode error on line {lines} (approximately)")
                 continue
             if first_time == 0:
                 try:
