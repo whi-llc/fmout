@@ -63,7 +63,7 @@ trim_points = False
 delete_points = False
 wrap_points = False
 use_limit = True
-debug_output = False
+debug_output = True
 regex_selection = False
 regex_invert = False
 find_jumps = False
@@ -77,7 +77,7 @@ if len(sys.argv)==1:
 try:
     options, remainder = getopt.getopt(
     sys.argv[1:],
-    'abcd:e:fg:hj:lm:nopqr:s:t:uvwyzR')
+    'abcDd:e:fg:hj:lm:npqr:s:t:uvwyzR')
 
 except getopt.GetoptError as err:
     print(('ERROR:', err))
@@ -143,7 +143,6 @@ Options:
       merge all the input files using "string" to identify the result
  -n   no line fitting
       implies "-u"
- -o   output debugging messages: no data, all data deleted, etc.
  -p   display plots interactively
  -q   print deltas for breaks ("-j")
  -r value
@@ -172,6 +171,7 @@ Options:
  -y   accept points outside +- 1 second
       if not, points outside +- 1 second are removed before considering "-wdt"
  -z   invert the sense of the "-g" selection
+ -D   suppress debug error messages: no data, all data deleted, Unicode, etc.
  -R   save pre-fit data to files ending .dat
       each line contains time-in-seconds-from-epoch followed by value''')
         sys.exit(0)
@@ -221,8 +221,8 @@ Options:
     elif opt == '-n':
         fit_line = False
         plot_raw_data = True
-    elif opt == '-o':
-        debug_output = True
+    elif opt == '-D':
+        debug_output = False
     elif opt == '-p':
         make_plot = True
     elif opt == '-q':
@@ -232,7 +232,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.83]')
+        sys.exit('[Version 0.84]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
