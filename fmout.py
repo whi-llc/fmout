@@ -77,7 +77,7 @@ if len(sys.argv)==1:
 try:
     options, remainder = getopt.getopt(
     sys.argv[1:],
-    'abcDd:e:fg:hj:lm:npqr:s:t:uvwyzR')
+    'abcd:e:fg:hj:lm:npqr:s:t:uvwyzDR')
 
 except getopt.GetoptError as err:
     print(('ERROR:', err))
@@ -85,7 +85,7 @@ except getopt.GetoptError as err:
 
 for opt,arg in options:
     if opt == '-h':
-        print('Usage: '+os.path.basename(os.path.splitext(sys.argv[0])[0])+' -abcd:ef:g:hj:lm:nopqr:s:t:uvwyzR files')
+        print('Usage: '+os.path.basename(os.path.splitext(sys.argv[0])[0])+' -abcd:ef:g:hj:lm:npqr:s:t:uvwyzDR files')
         print('''
  fits fmout & maser data from log files, prints values in order:
     log name
@@ -100,8 +100,8 @@ Options:
  -a   plot all data, otherwise start after first scan_name= and preob
       and end before the last postob, per file
  -b   fit for offset at beginning of data,
-      otherwise at the centroid or overrddden by "-e"
- -c   print convariance, otherwise omitted, values in order:
+      otherwise at the centroid or overridden by "-e"
+ -c   print covariance, otherwise omitted, values in order:
         offset sigma (scaled)
         rate   sigma (scaled)
         correlation
@@ -135,8 +135,8 @@ Options:
           (see "-b" and "-e"), the times can be read interactively off the
           "-p" plot with the pointer and multiplied by the appropriate scale,
           3600 for hours or 86400 for days
-      this option inplies "-b", unless "-e" is specified
-      in plot output ("-f" and "-p"), the epochs are indicated by veritcal lines
+      this option implies "-b", unless "-e" is specified
+      in plot output ("-f" and "-p"), the epochs are indicated by vertical lines
       the offset reported in plot annotations is the initial offset
  -l   connect data with a line in plots
  -m string
