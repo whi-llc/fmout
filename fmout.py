@@ -70,6 +70,7 @@ find_jumps = False
 plot_raw_data = False
 delta_jumps = False
 remove_points = False
+orig_epoch = False
 
 if len(sys.argv)==1:
     sys.exit('try '+sys.argv[0]+' -h')
@@ -77,7 +78,7 @@ if len(sys.argv)==1:
 try:
     options, remainder = getopt.getopt(
     sys.argv[1:],
-    'abcd:e:fg:hj:lm:npqr:s:t:uvwyzDR')
+    'abcd:e:fg:hj:lm:nopqr:s:t:uvwyzDR')
 
 except getopt.GetoptError as err:
     print(('ERROR:', err))
@@ -85,7 +86,7 @@ except getopt.GetoptError as err:
 
 for opt,arg in options:
     if opt == '-h':
-        print('Usage: '+os.path.basename(os.path.splitext(sys.argv[0])[0])+' -abcd:ef:g:hj:lm:npqr:s:t:uvwyzDR files')
+        print('Usage: '+os.path.basename(os.path.splitext(sys.argv[0])[0])+' -abcd:ef:g:hj:lm:nopqr:s:t:uvwyzDR files')
         print('''
  fits fmout & maser data from log files, prints values in order:
     log name
@@ -136,15 +137,19 @@ Options:
           "-p" plot with the pointer and multiplied by the appropriate scale,
           3600 for hours or 86400 for days
       this option implies "-b", unless "-e" is specified
-      in plot output ("-f" and "-p"), the epochs are indicated by vertical lines
-      the offset reported in plot annotations is the initial offset
+      the offset value for the break in the text output is at the epoch of the
+      break unless "-o" or "-q" is specified
+      in the plot output ("-f" and "-p"), the epochs are indicated by vertical
+      lines, the offset reported in plot annotations is the initial offset
  -l   connect data with a line in plots
  -m string
       merge all the input files using "string" to identify the result
+ -o   print the offset values for breaks (see "-j") at the original epoch,
+      instead of at the break epochs
  -n   no line fitting
       implies "-u"
  -p   display plots interactively
- -q   print deltas for breaks ("-j")
+ -q   print the deltas (changes) in the offset for breaks (see "-j")
  -r value
       remove residuals more than "value" ns from median, "50" might be useful
       this is applied after "-w" and "-d" and "-t"
@@ -223,16 +228,22 @@ Options:
         plot_raw_data = True
     elif opt == '-D':
         debug_output = False
+    elif opt == '-o':
+        if delta_jumps:
+            sys.exit(" -o and -q can't be used together")
+        orig_epoch = True
     elif opt == '-p':
         make_plot = True
     elif opt == '-q':
+        if orig_epoch:
+            sys.exit(" -o and -q can't be used together")
         delta_jumps = True
     elif opt == '-f':
         plot_files = True
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.86]')
+        sys.exit('[Version 0.87]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -654,14 +665,23 @@ for arg in iterarg:
             else:
                 print('{:.3f}'.format(res))
             for i in range(1,l_times-1):
-                print('{:9s}'.format(root), '{:24s}'.format('break'), end=' ')
+                print('{:9s}'.format(root), end=' ')
+                if delta_jumps:
+                    print('{:24s}'.format('break'), end=' ')
+                elif orig_epoch:
+                    print('{:24s}'.format('break (original epoch)'), end=' ')
+                else:
+                    print('{:24s}'.format('break (break epoch)'), end=' ')
                 tim=(epoch+datetime.timedelta(
                     0,times[i])).strftime('%Yy%jd%Hh%Mm%Ss')
                 if delta_jumps:
                     b1=coeff[i]-coeff[i-1]
                     print('{:8.3f}'.format(b1), '{:10s}'.format('delta'),tim)
                 else:
-                    b1=coeff[i]+times[i]*m
+                    if orig_epoch:
+                        b1=coeff[i]
+                    else:
+                        b1=coeff[i]+times[i]*m
                     print('{:8.3f}'.format(b1), '{:10s}'.format('total'),tim)
         elif fit_line:
             print('{:9s}'.format(root), '{:24s}'.format(key), end=' ')
