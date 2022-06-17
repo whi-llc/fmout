@@ -2,8 +2,8 @@
 #
 # Copyright (c) 2021, 2022 WHI LLC
 #
-# adjust: Adjust clock models for VLBI data correlation.
-# (see http://github.com/whi-llc/adjust).
+# fmout: Extract fmout and maser data from FS logs
+# (see http://github.com/whi-llc/fmout).
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -243,7 +243,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.87]')
+        sys.exit('[Version 0.88]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
