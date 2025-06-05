@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (c) 2021, 2022 WHI LLC
+# Copyright (c) 2021, 2022, 2025 WHI LLC
 #
 # fmout: Extract fmout and maser data from FS logs
 # (see http://github.com/whi-llc/fmout).
@@ -243,7 +243,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.88]')
+        sys.exit('[Version 0.89]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -285,6 +285,8 @@ rdbe_gps = re.compile(r'^([0-9.:]{20})#(rdtc.#dot2.ps.*)/(\S+)')
 #2017.337.22:47:46.86/rdbeb/!dbe_gps_offset?0:-5.189453125e-05;
 rdbe_gps2 = re.compile(r'^([0-9.:]{20})/(rdbe.)/!(dbe_.ps_offset)\?0:([^;]+);')
 dbbcout = re.compile(r'^([0-9.:]{20})(?:|;"|[^;][^"].*)/(.*dbbcout.*)/[^-+\.\d]*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)(\S*)')
+#2017.337.22:47:46.86/dot2pps(a)/-5.189453125e-05
+rdbe_gps3 = re.compile(r'^([0-9.:]{20})/(dot2.ps\(.\))/(\S+)')
 #
 scan_name= re.compile(r'^([0-9.:]{20}):scan_name=');
 preob= re.compile(':preob')
@@ -345,6 +347,7 @@ for arg in iterarg:
             m3=rdbe_gps.match(line)
             m4=rdbe_gps2.match(line)
             m5=dbbcout.match(line)
+            m6=rdbe_gps3.match(line)
             if m:
                 key=m.group(2)
                 if regex_selection:
@@ -460,6 +463,27 @@ for arg in iterarg:
                     g = re.compile(r'gps[-2]dbbcout')
                     if g.search(key):
                         negative[key]=True
+            elif m6:
+                key=m6.group(2)
+                if regex_selection:
+                    g=regex_object.search(key)
+                    if regex_invert:
+                        if g:
+                            continue
+                    elif not g:
+                        continue
+                dt=datetime.datetime.strptime(m6.group(1),'%Y.%j.%H:%M:%S.%f')
+                try:
+                    fm=float(m6.group(3))*1e6
+                except ValueError:
+                    if debug_output:
+                        eprint("can't decode line "+line.strip())
+                    continue
+                fm=float(m6.group(3))*1e6
+                if key not in x:
+                    count[key]=0
+                    x[key]={}
+                    y[key]={}
             else:
                 continue
             if use_limit and math.fabs(fm) >= 1e6:
