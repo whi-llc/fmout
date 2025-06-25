@@ -243,7 +243,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.89]')
+        sys.exit('[Version 0.90]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -547,6 +547,7 @@ for arg in iterarg:
             else:
                 warnings.simplefilter('always', np.RankWarning)
                 fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
+                res=res[0]
             m,b=fit
             v = o - np.polyval(fit, t)
             out=0
@@ -607,6 +608,7 @@ for arg in iterarg:
 #                    if t[i] >times[j]:
                         ar[i][j]=1
             coeff,res,rank,_ = np.linalg.lstsq(ar,o,rcond=None)
+            res=res[0]
             if rank < l_times:
                 sys.exit("breaks made fit degenerate, are they relative to the wrong epoch or too close together?")
             res=math.sqrt(res/(count[key]-l_times))
@@ -625,6 +627,7 @@ for arg in iterarg:
                 else:
                     warnings.simplefilter('always', np.RankWarning)
                     fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
+                    res=res[0]
                 m,b=fit
                 if remove_points:
                     v = o - np.polyval(fit, t)
