@@ -243,7 +243,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.91]')
+        sys.exit('[Version 0.91-numpy_after_1.24]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -542,10 +542,10 @@ for arg in iterarg:
                 t=np.append(t,(x[key][i]-x[key][0]).total_seconds())
                 o=np.append(o,y[key][i])
             if count[key]==2:
-                warnings.simplefilter('ignore', np.RankWarning)
+                warnings.simplefilter('ignore', np.exceptions.RankWarning)
                 fit, _, _, _, _ = np.polyfit(t,o,1,full=True)
             else:
-                warnings.simplefilter('always', np.RankWarning)
+                warnings.simplefilter('always', np.exceptions.RankWarning)
                 fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
                 res=res[0]
             m,b=fit
@@ -622,10 +622,10 @@ for arg in iterarg:
 #fit
             if count[key]>1:
                 if count[key]==2:
-                    warnings.simplefilter('ignore', np.RankWarning)
+                    warnings.simplefilter('ignore', np.exceptions.RankWarning)
                     fit, _, _, _, _ = np.polyfit(t,o,1,full=True)
                 else:
-                    warnings.simplefilter('always', np.RankWarning)
+                    warnings.simplefilter('always', np.exceptions.RankWarning)
                     fit, res, _, _, _ = np.polyfit(t,o,1,full=True)
                     res=res[0]
                 m,b=fit
