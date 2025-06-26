@@ -243,7 +243,7 @@ Options:
     elif opt == '-u':
         plot_raw_data = True
     elif opt == '-v':
-        sys.exit('[Version 0.90]')
+        sys.exit('[Version 0.91]')
     elif opt == '-w':
         wrap_points = True
     elif opt == '-y':
@@ -314,7 +314,7 @@ for arg in iterarg:
             if surrogates.search(line):
                 if debug_output:
 # new lines may not be interpreted correctly, hence approximately
-                    eprint(f"Found Unicode error on line {lines} (approximately)")
+                    eprint(f"Found Unicode error on line {lines} (approximately) of {arg}")
                 continue
             if first_time == 0:
                 try:
@@ -362,7 +362,7 @@ for arg in iterarg:
                     fm=float(m.group(3))*1e6
                 except ValueError:
                     if debug_output:
-                        eprint("can't decode line "+line.strip())
+                        eprint("can't decode line "+line.strip()+" in "+arg)
                     continue
                 if key not in x:
                     count[key]=0
@@ -389,7 +389,7 @@ for arg in iterarg:
                     fm=float(m2.group(3))*factor
                 except ValueError:
                     if debug_output:
-                        eprint("can't decode line "+line.strip())
+                        eprint("can't decode line "+line.strip()+" in "+arg)
                     continue
                 if key not in x:
                     count[key]=0
@@ -412,7 +412,7 @@ for arg in iterarg:
                     fm=float(m3.group(3))*1e6
                 except ValueError:
                     if debug_output:
-                        eprint("can't decode line "+line.strip())
+                        eprint("can't decode line "+line.strip()+" in "+arg)
                     continue
                 fm=float(m3.group(3))*1e6
                 if key not in x:
@@ -433,7 +433,7 @@ for arg in iterarg:
                     fm=float(m4.group(4))*1e6
                 except ValueError:
                     if debug_output:
-                        eprint("can't decode line "+line.strip())
+                        eprint("can't decode line "+line.strip()+" in "+arg)
                     continue
                 fm=float(m4.group(4))*1e6
                 if key not in x:
@@ -454,7 +454,7 @@ for arg in iterarg:
                     fm=float(m5.group(3))*1e6
                 except ValueError:
                     if debug_output:
-                        eprint("can't decode line "+line.strip())
+                        eprint("can't decode line "+line.strip()+" in "+arg)
                     continue
                 if key not in x:
                     count[key]=0
@@ -477,7 +477,7 @@ for arg in iterarg:
                     fm=float(m6.group(3))*1e6
                 except ValueError:
                     if debug_output:
-                        eprint("can't decode line "+line.strip())
+                        eprint("can't decode line "+line.strip()+" in "+arg)
                     continue
                 fm=float(m6.group(3))*1e6
                 if key not in x:
